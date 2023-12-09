@@ -1,13 +1,16 @@
-﻿#include <iostream>  
+#include <iostream>  
 #include <winsock2.h> 
 #include <windows.h> 
 #include <string> 
 #include <thread>  // добавляем заголовок для работы с потоками
+#include <atomic> // добавляем заголовок для работы с атомарными переменными
 #pragma comment (lib, "Ws2_32.lib")  
 using namespace std;
 
 #define SRV_PORT 1234  // порт сервера (его обязательно должен знать клиент)
 #define BUF_SIZE 64  // размер
+
+std::atomic<int> count_clients = 0;
 
 struct Person
 {
@@ -56,8 +59,10 @@ void clientThread(SOCKET s_new)
         send(s_new, (char*)&answer, sizeof(answer), 0);
     }
     cout << "client is lost" << endl;
+    // уменьшаем счетчик клиентов
+    count_clients.fetch_sub(1);
+    cout << "current connections: " << count_clients.load() << endl;
     closesocket(s_new);
-    std::cout << "break 1" << std::endl;
 }
 
 int main()
@@ -71,7 +76,7 @@ int main()
     }
     SOCKET s;
     int from_len;
-    sockaddr_in sin, from_sin;
+    sockaddr_in sin;
     s = socket(AF_INET, SOCK_STREAM, 0);
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = 0;
@@ -82,21 +87,26 @@ int main()
 
     while (1)
     {
+        sockaddr_in from_sin;
         from_len = sizeof(from_sin);
         cout << "break 5" << endl;
         SOCKET s_new = accept(s, (sockaddr*)&from_sin, &from_len);
+        cout << "break 6" << endl;
         if (s_new == INVALID_SOCKET) {
             cerr << "Error accepting client connection: " << WSAGetLastError() << endl;
-            // Дополнительные действия по обработке ошибки, например, продолжение ожидания новых подключений
             continue;
         }
+        else
+        {
+            cout << "new connected client! " << endl;
+            // увеличиваем счетчик клиентов
+            count_clients.fetch_add(1);
+            cout << "current connections: " << count_clients.load() << endl;
 
-        cout << "new connected client! " << endl;
-
-        // Создаем новый поток для общения с клиентом
-        thread client(clientThread, s_new);
-        client.detach();  // отсоединяем поток, чтобы он продолжал работу независимо
-        cout << "break 2" << endl;
+            // Создаем новый поток для общения с клиентом
+            thread client(clientThread, s_new);
+            client.detach();  // отсоединяем поток, чтобы он продолжал работу независимо, т.е. создаем демона
+        }
     }
     return 0;
 }
