@@ -73,8 +73,8 @@ int main()
 			case 2: {cout << "dolg\n"; break; }
 			case 3: {cout << "net stependii\n"; break; }
 			case 4: {cout << "obucnaia stependii\n"; break; }
-			case 5: {cout << "povishinaia stependii"; break; }
-			case -1: {cout << "Error, server sent wrong data"; }
+			case 5: {cout << "povishinaia stependii\n"; break; }
+			case -1: {cout << "Error, server sent wrong data\n"; }
 		}
 	} while (true);
 	cin.get();
